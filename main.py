@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
 import squarify
+import plotly.graph_objects as go
 import textwrap
 
 # Membaca data dari CSV
@@ -76,56 +77,182 @@ ax.set_title("Jumlah Customer per Segmen")
 st.pyplot(fig)
 
 
-# Tambahkan visualisasi distribusi umur
-st.subheader("Distribusi Umur Member")
 
-# Pastikan kolom Age ada dan dalam rentang valid
-if 'Age' in filtered_df.columns and filtered_df['Age'].notna().any():
-    # Filter umur yang valid (0-80 tahun)
-    valid_age_mask = (filtered_df['Age'] >= 0) & (filtered_df['Age'] <= 80)
-    valid_age_df = filtered_df[valid_age_mask].copy()
-    
-    if len(valid_age_df) > 0:
+# Segment filter
+selected_segment = st.selectbox(
+    "Select Customer Segment",
+    options=sorted(filtered_df['Segmentation'].unique())
+)
+
+# Filter data based on selection
+filtered_df = filtered_df[filtered_df['Segmentation'] == selected_segment]
+
+# Main dashboard
+st.title("Segmentation Analysis")
+st.subheader(f"Segment: {selected_segment}")
+
+# KPI Metrics dalam layout 2x2
+col1, col2 = st.columns(2)
+with col1:
+    st.metric("Total Customers", len(filtered_df))
+with col2:
+    st.metric("Average Monetary", f"Rp{filtered_df['Monetary'].mean():,.2f}")
+
+col3, col4 = st.columns(2)
+with col3:
+    st.metric("Average Frequency", f"{filtered_df['Frequency'].mean():.1f}")
+with col4:
+    st.metric("Average AOV", f"Rp{filtered_df['AOV'].mean():,.2f}")
+
+# Create two columns for charts
+col1, col2 = st.columns(2)
+
+# Age Distribution (Age sudah tersedia di CSV)
+with col1:
+    st.subheader("Age Distribution")
+    if 'Age' in filtered_df.columns and filtered_df['Age'].notna().any():
         fig_age = px.histogram(
-            valid_age_df,
+            filtered_df,
             x='Age',
             nbins=20,
-            title="Distribusi Umur (0-80 tahun)",
+            title="Age Distribution",
             color_discrete_sequence=['#3366CC']
         )
-        
         fig_age.update_layout(
             showlegend=False,
-            xaxis_title="Umur",
-            yaxis_title="Jumlah Member",
-            xaxis_range=[0, 80]  # Set range umur 0-80
+            xaxis_title="Age",
+            yaxis_title="Count"
         )
-        
         st.plotly_chart(fig_age, use_container_width=True)
-        
-        # Tampilkan statistik dalam format metric
-        age_stats = valid_age_df['Age'].describe()
-        col1, col2, col3, col4, col5 = st.columns(5)
-        with col1:
-            st.metric("Rata-rata Umur", f"{age_stats['mean']:.1f}")
-        with col2:
-            st.metric("Median Umur", f"{age_stats['50%']:.1f}")
-        with col3:
-            st.metric("Umur Minimum", f"{age_stats['min']:.0f}")
-        with col4:
-            st.metric("Umur Maximum", f"{age_stats['max']:.0f}")
-        with col5:
-            st.metric("Total Member Valid", f"{len(valid_age_df):,}")
-        
-        # Tampilkan informasi tentang data yang difilter
-        invalid_age_count = len(filtered_df) - len(valid_age_df)
-        if invalid_age_count > 0:
-            st.warning(f"Terdapat {invalid_age_count:,} member dengan umur tidak valid (di luar rentang 0-80 tahun)")
     else:
-        st.info("Tidak ada data umur yang valid dalam rentang 0-80 tahun")
-else:
-    st.info("Data umur tidak tersedia")
+        st.info("Age data not available")
 
+# LTV (Monetary) Distribution
+with col2:
+    st.subheader("Monetary Distribution")
+    fig_ltv = px.histogram(
+        filtered_df,
+        x='MCategory',
+        nbins=20,
+        title="Customer Monetary Distribution",
+        color_discrete_sequence=['#109618']
+    )
+    fig_ltv.update_layout(
+        showlegend=False,
+        xaxis_title="Lifetime Value (Rp)",
+        yaxis_title="Count"
+    )
+    st.plotly_chart(fig_ltv, use_container_width=True)
 
-# Tampilkan DataFrame yang sudah dipastikan kolom memberPhone-nya bertipe string
-st.dataframe(filtered_df)
+col3, col4 = st.columns(2)
+# Visit Frequency Distribution
+with col3:
+    st.subheader("Visit Frequency Distribution")
+    
+    # Calculate frequency distribution
+    freq_counts = filtered_df['Frequency'].value_counts().reset_index()
+    freq_counts.columns = ['Frequency', 'Count']
+    freq_counts = freq_counts.sort_values('Frequency')
+    
+    # Create line chart
+    fig_freq = go.Figure()
+    
+    # Add line trace
+    fig_freq.add_trace(
+        go.Scatter(
+            x=freq_counts['Frequency'],
+            y=freq_counts['Count'],
+            mode='lines',
+            line=dict(
+                color='#FF9900',
+                width=3,
+                shape='spline',  # Membuat garis menjadi smooth
+                smoothing=1.3    # Adjust smoothing factor
+            ),
+            hovertemplate='<b>Visits</b>: %{x}<br>' +
+                          '<b>Count</b>: %{y}<br>' +
+                          '<extra></extra>'  # Menghilangkan trace name dari hover
+        )
+    )
+    
+    # Update layout
+    fig_freq.update_layout(
+        showlegend=False,
+        xaxis_title="Number of Visits",
+        yaxis_title="Count",
+        hovermode='x unified',
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        xaxis=dict(
+            showgrid=True,
+            gridcolor='rgba(128, 128, 128, 0.2)',
+            gridwidth=1,
+            dtick=1,  # Menampilkan setiap integer pada sumbu-x
+            range=[1, max(freq_counts['Frequency']) + 1]
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor='rgba(128, 128, 128, 0.2)',
+            gridwidth=1,
+            zeroline=False
+        ),
+        margin=dict(l=0, r=0, t=20, b=0),
+        height=400
+    )
+    
+    st.plotly_chart(fig_freq, use_container_width=True)
+
+# Visit Recency Distribution
+with col4:
+    st.subheader("Visit Recency Distribution")
+    fig_recency = px.histogram(
+        filtered_df,
+        x='Recency',
+        nbins=20,
+        title="Visit Recency Distribution",
+        color_discrete_sequence=['#FF0000']
+    )
+    fig_recency.update_layout(
+        showlegend=False,
+        xaxis_title="Days Since Last Visit",
+        yaxis_title="Count"
+    )
+    st.plotly_chart(fig_recency, use_container_width=True)
+
+col5, col6 = st.columns(2)
+with col5:
+    st.subheader("RFM Score Distribution")
+    fig_rfm = px.box(
+        filtered_df,
+        y=['RScore', 'FScore', 'MScore'],
+        title="RFM Score Distribution",
+        color_discrete_sequence=['#DC3912', '#FF9900', '#109618']
+    )
+    fig_rfm.update_layout(
+        yaxis_title="Score",
+        xaxis_title="RFM Components"
+    )
+    st.plotly_chart(fig_rfm, use_container_width=True)
+
+# Detailed Customer Table
+st.subheader("Customer Details")
+columns_to_display = ['Age', 'Recency', 'Frequency', 'Monetary', 
+                     'RFMScore', 'AOV', 'Segmentation', 'Branch_Name']
+
+st.dataframe(
+    filtered_df[columns_to_display].style.format({
+        'Monetary': '${:,.2f}',
+        'AOV': '${:,.2f}',
+        'RFMScore': '{:.2f}'
+    }),
+    hide_index=True
+)
+
+# Download button for detailed data
+csv = filtered_df[columns_to_display].to_csv(index=False)
+st.download_button(
+    label="Download Segment Data",
+    data=csv,
+    file_name=f'rfm_segment_{selected_segment}.csv',
+    mime='text/csv'
+)
