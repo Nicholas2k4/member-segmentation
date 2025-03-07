@@ -10,6 +10,13 @@ import textwrap
 data_path = "RFM_revised_sby.csv"
 df = pd.read_csv(data_path)
 
+# Pastikan kolom memberPhone dalam tipe string (jika kolom ini ada)
+if 'MemberPhone' in df.columns:
+    print('yea')
+    df['MemberPhone'] = df['MemberPhone'].astype(str)
+    df['MemberPhone'] = '0' + df['MemberPhone']
+    df['MemberPhone'] = df['MemberPhone'].str.replace(r'\.0', '', regex=True)
+
 # Filter untuk cabang (Branch_Name)
 st.sidebar.subheader("Filter Data")
 branch_options = ["All"] + list(df["Branch_Name"].unique())
