@@ -121,14 +121,17 @@ with col1:
         fig_age = px.histogram(
             filtered_df,
             x='Age',
-            nbins=20,
+            nbins=80,
             title="Age Distribution",
             color_discrete_sequence=['#3366CC']
         )
+        # Update trace untuk mengatur bin size dengan tepat:
+        fig_age.update_traces(xbins=dict(start=0.5, end=80.5, size=1))
         fig_age.update_layout(
             showlegend=False,
             xaxis_title="Age",
-            yaxis_title="Count"
+            yaxis_title="Count",
+            xaxis=dict(range=[0.5, 80.5])
         )
         st.plotly_chart(fig_age, use_container_width=True)
     else:
