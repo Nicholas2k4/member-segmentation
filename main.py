@@ -2,8 +2,8 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
-import squarify
 import plotly.graph_objects as go
+import squarify
 import textwrap
 
 # Membaca data dari CSV
@@ -18,7 +18,7 @@ if 'MemberPhone' in df.columns:
     df['MemberPhone'] = df['MemberPhone'].str.replace(r'\.0', '', regex=True)
 
 # Filter untuk cabang (Branch_Name)
-st.sidebar.subheader("Filter Data")
+st.sidebar.title("Filter Data")
 branch_options = ["All"] + list(df["Branch_Name"].unique())
 selected_branch = st.sidebar.selectbox("Pilih Cabang", branch_options)
 
@@ -51,10 +51,10 @@ if 'memberPhone' in filtered_df.columns:
 # st.write(f"Menampilkan data untuk Cabang: **{selected_branch}**")
 # st.write(f"Jenis Member: **{selected_member_filter}**")
 # st.write(f"Filter Cheating Member: **{selected_cheating_filter}**")
-st.write(f"Total = **{len(filtered_df)}** members")
+st.subheader(f"Total = **{len(filtered_df)}** members")
 
 
-st.header('Member Segmentation')
+st.title('Member Segmentation')
 
 # Hitung jumlah customer per segmen
 segment_counts = filtered_df['Segmentation'].value_counts()
@@ -82,7 +82,6 @@ squarify.plot(
 ax.axis('off')
 ax.set_title("Jumlah Customer per Segmen")
 st.pyplot(fig)
-
 
 
 # Segment filter
@@ -246,7 +245,7 @@ with col5:
 
 # Detailed Customer Table
 st.subheader("Customer Details")
-columns_to_display = ['Age', 'Recency', 'Frequency', 'Monetary', 
+columns_to_display = ['CustomerName', 'MemberPhone', 'Age', 'Recency', 'Frequency', 'Monetary', 
                      'RFMScore', 'AOV', 'Segmentation', 'Branch_Name']
 
 st.dataframe(
@@ -266,3 +265,4 @@ st.download_button(
     file_name=f'rfm_segment_{selected_segment}.csv',
     mime='text/csv'
 )
+
